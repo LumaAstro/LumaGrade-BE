@@ -30,9 +30,9 @@ jobs:
 
     - name: Create Hash
       run: |
-        $dllPath = "x64\Release\AstroAnalysis.dll"
+        $dllPath = "x64\Release\LumaGrade-BE.dll"
         $hash = Get-FileHash $dllPath -Algorithm SHA256
-        $hash.Hash | Out-File "AstroAnalysis.dll.hash"
+        $hash.Hash | Out-File "LumaGrade-BE.dll.hash"
         
     - name: Create Version File
       run: |
@@ -43,8 +43,8 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          x64/Release/AstroAnalysis.dll
-          AstroAnalysis.dll.hash
+          x64/Release/LumaGrade-BE.dll
+          LumaGrade-BE.dll.hash
           version.txt
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
