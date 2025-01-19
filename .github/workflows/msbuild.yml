@@ -3,36 +3,37 @@ on:
   push:
     tags:
       - 'v*'  # Nur bei Version-Tags wie v1.0.0
-
 env:
   SOLUTION_FILE_PATH: .
   BUILD_CONFIGURATION: Release
-
 permissions:
   contents: write  # Für Release-Erstellung
-
 jobs:
   build:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v4
-
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v1.0.2
-
     - name: Restore NuGet packages
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: nuget restore ${{env.SOLUTION_FILE_PATH}}
-
     - name: Build
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} ${{env.SOLUTION_FILE_PATH}}
-
-    - name: Create Hash
+    
+    - name: Set Version Variable
       run: |
-        $dllPath = "x64\Release\LumaGrade-BE.dll"
-        $hash = Get-FileHash $dllPath -Algorithm SHA256
-        $hash.Hash | Out-File "LumaGrade-BE.dll.hash"
+        $version = $env:GITHUB_REF -replace 'refs/tags/v', ''
+        echo "DLL_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+    - name: Rename and Create Hash
+      run: |
+        $sourcePath = "x64\Release\LumaGrade-BE.dll"
+        $targetPath = "x64\Release\LumaGrade-BE-${{ env.DLL_VERSION }}.dll"
+        Copy-Item $sourcePath $targetPath
+        $hash = Get-FileHash $targetPath -Algorithm SHA256
+        $hash.Hash | Out-File "LumaGrade-BE-${{ env.DLL_VERSION }}.dll.hash"
         
     - name: Create Version File
       run: |
@@ -43,8 +44,8 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          x64/Release/LumaGrade-BE.dll
-          LumaGrade-BE.dll.hash
+          x64/Release/LumaGrade-BE-${{ env.DLL_VERSION }}.dll
+          LumaGrade-BE-${{ env.DLL_VERSION }}.dll.hash
           version.txt
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
