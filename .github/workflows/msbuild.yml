@@ -1,0 +1,50 @@
+name: Build and Release DLL
+on:
+  push:
+    tags:
+      - 'v*'  # Nur bei Version-Tags wie v1.0.0
+
+env:
+  SOLUTION_FILE_PATH: .
+  BUILD_CONFIGURATION: Release
+
+permissions:
+  contents: write  # Für Release-Erstellung
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@v1.0.2
+
+    - name: Restore NuGet packages
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      run: nuget restore ${{env.SOLUTION_FILE_PATH}}
+
+    - name: Build
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      run: msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} ${{env.SOLUTION_FILE_PATH}}
+
+    - name: Create Hash
+      run: |
+        $dllPath = "x64\Release\AstroAnalysis.dll"
+        $hash = Get-FileHash $dllPath -Algorithm SHA256
+        $hash.Hash | Out-File "AstroAnalysis.dll.hash"
+        
+    - name: Create Version File
+      run: |
+        $tag = $env:GITHUB_REF -replace 'refs/tags/v', ''
+        $tag | Out-File "version.txt"
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          x64/Release/AstroAnalysis.dll
+          AstroAnalysis.dll.hash
+          version.txt
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
